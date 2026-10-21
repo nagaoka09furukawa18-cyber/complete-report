@@ -3,278 +3,265 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>加工完了報告 (スマホ用)</title>
-    <!-- QRコードスキャン用ライブラリ (html5-qrcode) -->
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <title>加工完了報告ツール (スマホ版)</title>
+    <!-- QRコードスキャン用ライブラリ -->
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; margin: 0; padding: 15px; color: #333; }
-        .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #2c3e50; margin-top: 0; font-size: 20px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; background: #f4f7f9; padding: 10px; margin: 0; color: #333; }
+        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
+        .screen { display: none; } 
+        .active { display: block; }
         
-        /* カメラ表示エリア */
-        #reader { width: 100%; border-radius: 8px; overflow: hidden; background: #000; margin-bottom: 15px; display: none; }
+        button { padding: 12px 18px; margin: 5px; font-size: 15px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
+        .btn-blue { background: #007bff; color: white; }
+        .btn-green { background: #28a745; color: white; }
+        .btn-gray { background: #6c757d; color: white; }
+        .btn-main { width: 100%; padding: 16px; font-size: 18px; margin: 10px 0; display: block; box-sizing: border-box; }
         
-        .camera-toggle-btn { width: 100%; background: #3498db; color: white; border: none; padding: 14px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; margin-bottom: 15px; }
-        .camera-toggle-btn:active { background: #2980b9; }
-        .camera-toggle-btn.active { background: #e74c3c; }
+        /* ズーム切替ボタン用スタイル */
+        .btn-zoom { background: #6c757d; color: white; padding: 6px 14px; font-size: 13px; margin: 0 2px; }
+        .btn-zoom.active-zoom { background: #ff9800; color: white; }
 
-        /* 手入力エリア */
-        .manual-input-box { display: flex; gap: 8px; margin-bottom: 20px; }
-        .manual-input-box input { flex-grow: 1; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
-        .manual-input-box button { background: #2ecc71; color: white; border: none; padding: 0 20px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; }
-        .manual-input-box button:active { background: #27ae60; }
-
-        /* 結果プレビューカード */
-        .result-card { background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: none; }
-        .result-card.ok { border-color: #2ecc71; background: #e8f8f5; }
-        .result-card.error { border-color: #e74c3c; background: #f9ebea; }
-        
-        .result-title { font-size: 14px; font-weight: bold; color: #555; margin-bottom: 5px; }
-        .result-value { font-size: 22px; font-weight: bold; color: #2c3e50; margin-bottom: 10px; word-break: break-all; }
-        .result-duedate { font-size: 16px; color: #e67e22; font-weight: bold; margin-bottom: 10px; }
-        .result-message { font-size: 15px; font-weight: bold; line-height: 1.4; }
-        .result-message.success { color: #27ae60; }
-        .result-message.alert { color: #c0392b; }
-
-        /* 完了送信ボタン */
-        .submit-btn { width: 100%; background: #2ecc71; color: white; border: none; padding: 16px; font-size: 18px; font-weight: bold; border-radius: 8px; cursor: pointer; display: none; }
-        .submit-btn:active { background: #27ae60; }
-        .submit-btn:disabled { background: #bdc3c7; cursor: not-allowed; }
-
-        /* スピナーオーバーレイ */
-        #loadingOverlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.5); z-index: 9999;
-            justify-content: center; align-items: center; flex-direction: column; color: #fff; font-weight: bold; font-size: 18px;
+        /* カメラ映像のCSSズーム・拡大用スタイル */
+        #reader {
+            overflow: hidden;
+            position: relative;
+            border-radius: 8px;
+            background: #000;
         }
-        .spinner { width: 45px; height: 45px; border: 5px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 0.8s linear infinite; margin-bottom: 15px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        #reader video {
+            transform: scale(var(--zoom-scale, 2.0));
+            transform-origin: center center;
+            transition: transform 0.2s ease-out;
+        }
+
+        /* 手入力ボックス */
+        .manual-input-box { display: flex; gap: 8px; margin-top: 15px; }
+        .manual-input-box input { flex-grow: 1; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+
+        /* 結果表示領域 */
+        #tehaiDisplay { font-size: 22px; font-weight: bold; margin-bottom: 15px; color: #333; background: #f8f9fa; padding: 12px; border-radius: 8px; border: 1px solid #eee; word-break: break-all; }
+        #tehaiDisplay span { color: #007bff; margin-left: 10px; }
+        
+        .result-card { background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 8px; padding: 15px; margin-bottom: 15px; text-align: left; }
+        .result-card.ok { border-color: #28a745; background: #e8f8f5; }
+        .result-card.error { border-color: #dc3545; background: #f8d7da; }
+        .result-duedate { font-size: 18px; color: #d9534f; font-weight: bold; margin-bottom: 8px; }
+        .result-message { font-size: 15px; font-weight: bold; line-height: 1.4; }
+
+        /* スピナー */
+        #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; }
+        .spinner { border: 6px solid #f3f3f3; border-top: 6px solid #007bff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-<div id="loadingOverlay">
+<div id="loading-overlay">
     <div class="spinner"></div>
-    <div id="loadingMessage">確認中...</div>
+    <p id="loading-text">処理中...</p>
 </div>
 
-<div class="container">
-    <h2>加工完了報告</h2>
-
-    <!-- カメラ起動ボタン -->
-    <button id="camToggleBtn" class="camera-toggle-btn" onclick="toggleCamera()">📷 カメラでQRを読み取る</button>
-    
-    <!-- QRスキャナー描画領域 -->
-    <div id="reader"></div>
-
-    <!-- 手動入力保険ボックス -->
-    <div class="manual-input-box">
-        <input type="text" id="manualInput" placeholder="手配Noを手動入力..." onkeypress="handleKeyPress(event)">
-        <button onclick="submitManualInput()">確認</button>
+<div class="card">
+    <!-- メイン画面 -->
+    <div id="screenMain" class="screen active">
+        <h2>加工完了報告</h2>
+        <button class="btn-blue btn-main" onclick="startScan()">📷 QRスキャン開始</button>
+        
+        <div class="manual-input-box">
+            <input type="text" id="manualInput" placeholder="手配Noを手動入力..." onkeypress="handleKeyPress(event)">
+            <button class="btn-green" onclick="submitManualInput()">確認</button>
+        </div>
     </div>
 
-    <!-- 判定結果・プレビューカード -->
-    <div id="resultCard" class="result-card">
-        <div class="result-title" id="cardTitle">読み取り結果</div>
-        <div class="result-value" id="displayTehaiNo">-</div>
-        <div class="result-duedate" id="displayDueDate" style="display:none;">最終納期：<span>-</span></div>
-        <div class="result-message" id="displayMessage">-</div>
+    <!-- ズーム切替ボタン付きスキャン画面 -->
+    <div id="screenScanner" class="screen">
+        <h3 style="margin: 5px 0 10px 0;">スキャン中...</h3>
+        <div style="background: #e9ecef; padding: 8px; border-radius: 8px; margin-bottom: 10px;">
+            <span style="font-size: 13px; font-weight: bold; margin-right: 5px;">倍率切替:</span>
+            <button id="btnZoom1" class="btn-zoom" onclick="changeZoom(1.0)">1倍</button>
+            <button id="btnZoom2" class="btn-zoom active-zoom" onclick="changeZoom(2.0)">2倍</button>
+            <button id="btnZoom3" class="btn-zoom" onclick="changeZoom(3.0)">3倍</button>
+        </div>
+        <div id="reader" style="width: 100%;"></div>
+        <button class="btn-gray" onclick="resetToMain()" style="margin-top: 15px; width: 100%;">中止</button>
     </div>
 
-    <!-- 完了報告確定ボタン -->
-    <button id="submitCompleteBtn" class="submit-btn" onclick="executeCompleteReport()">この内容で完了報告を送信する</button>
+    <!-- 照会結果 ＆ 完了報告確定画面 -->
+    <div id="screenDetail" class="screen">
+        <div id="tehaiDisplay">手配No：<span id="targetTehaiNo">-</span></div>
+        
+        <div id="resultCard" class="result-card">
+            <div id="displayDueDate" class="result-duedate" style="display:none;">最終納期：<span>-</span></div>
+            <div id="displayMessage" class="result-message">-</div>
+        </div>
+
+        <button id="btnExecuteSubmit" class="btn-green btn-main" style="display:none;" onclick="executeCompleteReport()">完了報告を送信する</button>
+        <button class="btn-gray" onclick="resetToMain()" style="width: 100%;">戻る</button>
+    </div>
 </div>
 
 <script>
-    // ⚠️ 【重要】ご自身のGASウェブアプリのデプロイURL（/execで終わるもの）に書き換えてください
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz.../exec"; 
+    // ⚠️ ご自身のGASデプロイURLに書き換えてください
+    const GAS_URL = "https://script.google.com/macros/s/AKfycb.../exec";
 
     let html5QrCode = null;
-    let isCameraActive = false;
-    let verifiedTehaiNo = null;
+    let savedZoomLevel = 2.0;
+    let activeTehaiNo = "";
 
-    function showLoading(msg) {
-        document.getElementById("loadingMessage").textContent = msg || "処理中...";
-        document.getElementById("loadingOverlay").style.display = "flex";
+    function showLoading(text) {
+        document.getElementById('loading-text').innerText = text || "処理中...";
+        document.getElementById('loading-overlay').style.display = 'flex';
     }
 
     function hideLoading() {
-        document.getElementById("loadingOverlay").style.display = "none";
+        document.getElementById('loading-overlay').style.display = 'none';
     }
 
-    // カメラのON/OFF切り替え
-    function toggleCamera() {
-        const btn = document.getElementById("camToggleBtn");
-        const readerDiv = document.getElementById("reader");
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
 
-        if (!isCameraActive) {
-            readerDiv.style.display = "block";
-            btn.textContent = "📷 カメラを閉じる";
-            btn.classList.add("active");
-            isCameraActive = true;
+    // カメラのズーム切替
+    function changeZoom(zoomLevel) {
+        savedZoomLevel = zoomLevel;
+        document.documentElement.style.setProperty('--zoom-scale', zoomLevel);
+        
+        document.querySelectorAll('.btn-zoom').forEach(btn => btn.classList.remove('active-zoom'));
+        if (zoomLevel === 1.0) document.getElementById('btnZoom1').classList.add('active-zoom');
+        if (zoomLevel === 2.0) document.getElementById('btnZoom2').classList.add('active-zoom');
+        if (zoomLevel === 3.0) document.getElementById('btnZoom3').classList.add('active-zoom');
+    }
 
-            html5QrCode = new Html5Qrcode("reader");
-            html5QrCode.start(
-                { facingMode: "environment" }, // 外カメラ優先
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                onScanSuccess,
-                onScanFailure
-            ).catch(err => {
-                alert("カメラの起動に失敗しました（権限を確認してください）: " + err);
-                closeCamera();
-            });
-        } else {
-            closeCamera();
+    // スキャン開始
+    function startScan() {
+        showScreen('screenScanner');
+        changeZoom(savedZoomLevel);
+
+        try {
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+
+            const successCallback = (txt) => {
+                if (html5QrCode && html5QrCode.isScanning) {
+                    html5QrCode.stop().then(() => {
+                        onScanSuccess(txt);
+                    }).catch(() => { onScanSuccess(txt); });
+                }
+            };
+
+            const config = { fps: 10, qrbox: 250 };
+            const constraints = { facingMode: "environment" };
+
+            html5QrCode.start(constraints, config, successCallback)
+                .catch(err => {
+                    alert("カメラの起動に失敗しました: " + err);
+                    resetToMain();
+                });
+        } catch (err) {
+            alert("カメラの起動に失敗しました: " + err);
+            resetToMain();
         }
     }
 
-    function closeCamera() {
-        if (html5QrCode && isCameraActive) {
-            html5QrCode.stop().then(() => {
-                html5QrCode.clear();
-                resetCameraUI();
-            }).catch(() => {
-                resetCameraUI();
-            });
-        } else {
-            resetCameraUI();
-        }
-    }
-
-    function resetCameraUI() {
-        isCameraActive = false;
-        document.getElementById("reader").style.display = "none";
-        const btn = document.getElementById("camToggleBtn");
-        btn.textContent = "📷 カメラでQRを読み取る";
-        btn.classList.remove("active");
-    }
-
-    // QRスキャン成功時のコールバック
-    function onScanSuccess(decodedText) {
-        closeCamera(); // スキャンできたら一度カメラを閉じる
-        checkInstruction(decodedText.trim());
-    }
-
-    function onScanFailure(error) {
-        // スキャン中は毎フレーム呼ばれるため何もしない
+    function onScanSuccess(no) {
+        const cleanedNo = String(no).trim();
+        checkInstruction(cleanedNo);
     }
 
     function handleKeyPress(e) {
-        if (e.key === 'Enter') {
-            submitManualInput();
-        }
+        if (e.key === 'Enter') submitManualInput();
     }
 
     function submitManualInput() {
-        const inputVal = document.getElementById("manualInput").value.trim();
-        if (!inputVal) {
+        const val = document.getElementById("manualInput").value.trim();
+        if (!val) {
             alert("手配Noを入力してください。");
             return;
         }
-        checkInstruction(inputVal);
+        checkInstruction(val);
     }
 
-    // サーバーに手配Noを送り、存在・状態を検証する
-    function checkInstruction(tehaiNo) {
-        showLoading("手配Noを照会中...");
-        
-        // GASへGETリクエスト（CORS対策としてJSONPまたはfetch形式）
-        // ※GAS側で doGet(e) にて e.parameter.action === 'verify' 等の処理を受け付けるか、
-        // 簡易的にURLパラメータで関数を叩く仕組みにする必要があります。
-        
-        // 【GAS側の拡張補足】
-        // GAS側でスマホからの fetch (POST/GET) を受け取れるよう、doGet(e) または doPost(e) のハンドリングが必要です。
-        // 次のステップでGAS側のAPI受付処理を補完します。
-        
-        const targetUrl = `${GAS_WEB_APP_URL}?action=verify&tehaiNo=${encodeURIComponent(tehaiNo)}`;
+    // GASへ照会リクエスト
+    async function checkInstruction(tehaiNo) {
+        showLoading("DB照会中...");
+        activeTehaiNo = tehaiNo;
+        document.getElementById('targetTehaiNo').innerText = tehaiNo;
 
-        fetch(targetUrl)
-            .then(res => res.json())
-            .then(data => {
-                hideLoading();
-                renderResult(data);
-            })
-            .catch(err => {
-                hideLoading();
-                alert("サーバー通信エラー: " + err);
-            });
-    }
-
-    // 判定結果の描画
-    function renderResult(res) {
-        const card = document.getElementById("resultCard");
-        const title = document.getElementById("cardTitle");
-        const val = document.getElementById("displayTehaiNo");
-        const dueDateElem = document.getElementById("displayDueDate");
-        const msg = document.getElementById("displayMessage");
-        const submitBtn = document.getElementById("submitCompleteBtn");
-
-        card.style.display = "block";
-        val.textContent = res.tehaiNo || "-";
-
-        if (res.status === "OK") {
-            card.className = "result-card ok";
-            title.textContent = "✅ 有効な手配No";
-            dueDateElem.style.display = "block";
-            dueDateElem.querySelector("span").textContent = res.dueDate;
-            msg.className = "result-message success";
-            msg.textContent = res.message;
-            
-            verifiedTehaiNo = res.tehaiNo;
-            submitBtn.style.display = "block"; // 完了ボタンを表示
-        } else {
-            card.className = "result-card error";
-            dueDateElem.style.display = "none";
-            submitBtn.style.display = "none";
-            verifiedTehaiNo = null;
-
-            if (res.status === "ALREADY_COMPLETED") {
-                title.textContent = "⚠️ すでに完了済です";
-                msg.className = "result-message alert";
-                msg.textContent = res.message;
-            } else if (res.status === "NOT_FOUND") {
-                title.textContent = "❌ 存在しない手配No";
-                msg.className, msg.className = "result-message alert";
-                msg.textContent = res.message;
-            } else {
-                title.textContent = "⚠️ エラー";
-                msg.className = "result-message alert";
-                msg.textContent = res.message || "不明なエラーが発生しました。";
-            }
+        try {
+            const resp = await fetch(`${GAS_URL}?action=verify&tehaiNo=${encodeURIComponent(tehaiNo)}`);
+            const res = await resp.json();
+            hideLoading();
+            renderResultUI(res);
+        } catch (e) {
+            hideLoading();
+            alert("通信エラーが発生しました: " + e);
+            resetToMain();
         }
     }
 
-    // 完了報告を送信する
-    function executeCompleteReport() {
-        if (!verifiedTehaiNo) return;
+    // 照会結果のUI更新
+    function renderResultUI(res) {
+        showScreen('screenDetail');
+        
+        const card = document.getElementById('resultCard');
+        const dueDateBox = document.getElementById('displayDueDate');
+        const msgBox = document.getElementById('displayMessage');
+        const submitBtn = document.getElementById('btnExecuteSubmit');
 
-        if (!confirm(`手配No [ ${verifiedTehaiNo} ] の完了報告を送信しますか？`)) {
+        if (res.status === "OK") {
+            card.className = "result-card ok";
+            dueDateBox.style.display = "block";
+            dueDateBox.querySelector("span").innerText = res.dueDate || "（納期なし）";
+            msgBox.innerText = "有効な手配Noです。完了報告を送信できます。";
+            submitBtn.style.display = "block";
+        } else {
+            card.className = "result-card error";
+            dueDateBox.style.display = "none";
+            submitBtn.style.display = "none";
+            msgBox.innerText = res.message || "エラーが発生しました。";
+        }
+    }
+
+    // 完了報告の送信実行
+    async function executeCompleteReport() {
+        if (!activeTehaiNo) return;
+
+        if (!confirm(`手配No [ ${activeTehaiNo} ] の完了報告を送信しますか？`)) {
             return;
         }
 
         showLoading("完了報告を送信中...");
 
-        const targetUrl = `${GAS_WEB_APP_URL}?action=complete&tehaiNo=${encodeURIComponent(verifiedTehaiNo)}`;
+        try {
+            const resp = await fetch(`${GAS_URL}?action=complete&tehaiNo=${encodeURIComponent(activeTehaiNo)}`);
+            const res = await resp.json();
+            hideLoading();
 
-        fetch(targetUrl)
-            .then(res => res.json())
-            .then(data => {
-                hideLoading();
-                if (data.success) {
-                    alert("✨ 完了報告を受け付けました！");
-                    // 画面をリセット
-                    document.getElementById("resultCard").style.display = "none";
-                    document.getElementById("submitCompleteBtn").style.display = "none";
-                    document.getElementById("manualInput").value = "";
-                    verifiedTehaiNo = null;
-                } else {
-                    alert("送信エラー: " + data.message);
-                }
-            })
-            .catch(err => {
-                hideLoading();
-                alert("通信エラー: " + err);
-            });
+            if (res.success) {
+                alert("✨ 完了報告が正常に送信されました！");
+                resetToMain();
+            } else {
+                alert("送信失敗: " + res.message);
+            }
+        } catch (e) {
+            hideLoading();
+            alert("通信エラーが発生しました: " + e);
+        }
+    }
+
+    async function resetToMain() {
+        try {
+            if (html5QrCode && html5QrCode.isScanning) {
+                await html5QrCode.stop();
+            }
+        } catch(e) {}
+
+        activeTehaiNo = "";
+        document.getElementById("manualInput").value = "";
+        showScreen('screenMain');
     }
 </script>
 
