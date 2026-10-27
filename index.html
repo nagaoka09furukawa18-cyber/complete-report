@@ -152,35 +152,10 @@
                 }
             };
 
-            // フォーカスモード指定および解像度・フレームレートの最適化設定
-            const config = { 
-    fps: 15, 
-    qrbox: { width: 180, height: 180 } // 180〜200 程度でQRがピッタリ収まるサイズにする
-};
-            const constraints = { 
-                facingMode: "environment",
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-                focusMode: "continuous",
-                advanced: [{ focusMode: "continuous" }]
-            };
+            const config = { fps: 10, qrbox: 250 };
+            const constraints = { facingMode: "environment" };
 
             html5QrCode.start(constraints, config, successCallback)
-                .then(() => {
-                    // iOS(Safari)環境向け：起動後に常時オートフォーカス制約を明示的に再適用
-                    setTimeout(async () => {
-                        try {
-                            if (html5QrCode && html5QrCode.isScanning) {
-                                await html5QrCode.applyVideoConstraints({
-                                    focusMode: "continuous",
-                                    advanced: [{ focusMode: "continuous" }]
-                                });
-                            }
-                        } catch (e) {
-                            console.log("フォーカス制約の再適用スキップ (非対応環境):", e);
-                        }
-                    }, 1000);
-                })
                 .catch(err => {
                     alert("カメラの起動に失敗しました: " + err);
                     resetToMain();
