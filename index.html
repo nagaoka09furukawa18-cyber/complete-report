@@ -153,7 +153,10 @@
             };
 
             // フォーカスモード指定および解像度・フレームレートの最適化設定
-            const config = { fps: 15, qrbox: 250 };
+            const config = { 
+    fps: 15, 
+    qrbox: { width: 180, height: 180 } // 180〜200 程度でQRがピッタリ収まるサイズにする
+};
             const constraints = { 
                 facingMode: "environment",
                 width: { ideal: 1920 },
